@@ -8,10 +8,10 @@ properties:
     required: true
     const: 0
 
-  bindings:
-    type: phandle-array
+  binding:
+    type: phandle
     required: true
-    description: "One binding entry (unused). Use any valid behavior binding like &none."
+    description: "Sensor device this controller is attached to (e.g., an EC11 encoder node)."
 
   index:
     type: int
