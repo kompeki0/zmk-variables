@@ -8,12 +8,18 @@ properties:
   "#binding-cells":
     type: int
     required: true
-    const: 2
+    const: 1
 
   binding:
     type: phandle
     required: true
     description: Target behavior to invoke (usually &mmv)
+
+  index:
+    type: int
+    required: false
+    default: 0
+    description: Value-store index to read speed from
 
   value-min:
     type: int

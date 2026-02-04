@@ -29,7 +29,9 @@ struct behavior_mouse_move_dynamic_config {
     int32_t min_vel;
     int32_t max_vel;
     uint16_t poll_ms;
+    uint8_t index;   // ★追加
 };
+
 
 struct active_state {
     bool active;
@@ -160,7 +162,7 @@ static int on_pressed(struct zmk_behavior_binding *binding,
     data->st.last_pos = event.position;
     data->st.last_layer = event.layer;
     data->st.dir_param = binding->param1;
-    data->st.value_index = (uint8_t)binding->param2;
+    data->st.value_index = cfg->index;
 
     int32_t val = zmk_value_store_get(data->st.value_index, cfg->value_min);
     int32_t vel = value_to_velocity(cfg, val);
@@ -206,7 +208,8 @@ static const struct behavior_driver_api api = {
         .value_max = DT_INST_PROP_OR(n, value_max, 100),                        \
         .min_vel = DT_INST_PROP_OR(n, min_vel, 200),                            \
         .max_vel = DT_INST_PROP_OR(n, max_vel, 1800),                           \
-        .poll_ms = DT_INST_PROP_OR(n, poll_ms, 40),                             \
+        .poll_ms = DT_INST_PROP_OR(n, poll_ms, 40),  
+        .index = DT_INST_PROP_OR(n, index, 0),                           \
     };                                                                          \
     static struct behavior_mouse_move_dynamic_data data_##n = {};               \
     BEHAVIOR_DT_INST_DEFINE(n, NULL, NULL, &data_##n, &cfg_##n,                 \
