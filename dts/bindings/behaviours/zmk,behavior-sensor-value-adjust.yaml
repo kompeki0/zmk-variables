@@ -7,11 +7,16 @@ properties:
     type: int
     required: true
     const: 0
+  
+  # ★keymap sensor controllerとして成立させるため（中身は使わないのでダミーでOK）
+  bindings:
+    type: phandle-array
+    required: true
+    description: "Dummy binding list. Use <&none>."
 
   index:
     type: int
     required: true
-    description: "Value store index to modify"
 
   min:
     type: int
@@ -32,8 +37,3 @@ properties:
     type: int
     required: false
     default: 1
-
-  bindings:
-    type: phandle-array
-    required: true
-    description: "Dummy binding list (required by keymap sensor controller). Use <&none>."
