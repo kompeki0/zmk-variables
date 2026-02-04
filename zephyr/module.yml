@@ -2,3 +2,5 @@ name: zmk-rotation-value-change
 build:
   cmake: .
   kconfig: Kconfig
+  settings:
+    dts_root: .
