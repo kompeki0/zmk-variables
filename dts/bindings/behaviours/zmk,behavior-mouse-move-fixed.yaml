@@ -1,0 +1,23 @@
+description: Debug mouse move behavior (fixed speed, direct input_report_rel)
+
+compatible: "zmk,behavior-mouse-move-fixed"
+
+include: one_param.yaml
+
+properties:
+  "#binding-cells":
+    type: int
+    required: true
+    const: 1
+
+  speed:
+    type: int
+    required: false
+    default: 1200
+    description: Movement speed (units/sec)
+
+  trigger-period-ms:
+    type: int
+    required: false
+    default: 20
+    description: Tick interval in ms
