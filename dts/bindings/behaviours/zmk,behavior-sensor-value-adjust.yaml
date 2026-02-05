@@ -2,6 +2,8 @@ description: Sensor behavior to adjust an integer value by rotary detents
 
 compatible: "zmk,behavior-sensor-value-adjust"
 
+include: one_param.yaml
+
 properties:
   "#sensor-binding-cells":
     type: int
