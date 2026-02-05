@@ -1,14 +1,12 @@
-description: Mouse move behavior that derives speed dynamically from a shared value store
+description: Mouse move behavior with dynamic speed from value_store
 
-compatible: "zmk,behavior-mouse-move-dynamic"
-
-include: one_param.yaml
+compatible: "zmk,behavior-mouse-move-value"
 
 properties:
-  binding:
-    type: phandle
+  "#binding-cells":
+    type: int
     required: true
-    description: Target behavior to invoke (usually &mmv)
+    const: 1
 
   index:
     type: int
@@ -25,17 +23,17 @@ properties:
     required: false
     default: 100
 
-  min-vel:
+  min-speed:
     type: int
     required: false
     default: 200
 
-  max-vel:
+  max-speed:
     type: int
     required: false
     default: 1800
 
-  poll-ms:
+  trigger-period-ms:
     type: int
     required: false
-    default: 40
+    default: 20
