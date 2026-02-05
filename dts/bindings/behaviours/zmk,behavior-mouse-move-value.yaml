@@ -6,6 +6,11 @@ compatible: "zmk,behavior-mouse-move-value"
 include: one_param.yaml
 
 properties:
+  binding:
+    type: phandle
+    required: true
+    description: Target mmv behavior device to control
+
   index:
     type: int
     required: false
@@ -34,4 +39,4 @@ properties:
   trigger-period-ms:
     type: int
     required: false
-    default: 20
+    default: 40
