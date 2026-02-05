@@ -23,8 +23,8 @@ struct behavior_mouse_move_value_config {
     int32_t value_min;
     int32_t value_max;
 
-    int32_t min_speed;
-    int32_t max_speed;
+    int32_t min_speed; // units/sec
+    int32_t max_speed; // units/sec
 
     uint16_t trigger_period_ms;
 };
@@ -44,10 +44,13 @@ static inline int32_t clamp_i32(int32_t v, int32_t lo, int32_t hi) {
 static int32_t map_value_to_speed(const struct behavior_mouse_move_value_config *cfg, int32_t v) {
     int32_t vmin = cfg->value_min;
     int32_t vmax = cfg->value_max;
-    if (vmax == vmin) return cfg->max_speed;
+    if (vmax == vmin) {
+        return cfg->max_speed;
+    }
 
     v = clamp_i32(v, vmin, vmax);
 
+    // linear map: [vmin..vmax] -> [min_speed..max_speed]
     int64_t num = (int64_t)(v - vmin) * (cfg->max_speed - cfg->min_speed);
     int64_t den = (int64_t)(vmax - vmin);
     int32_t out = cfg->min_speed + (int32_t)(num / den);
@@ -60,39 +63,49 @@ static void tick_work_cb(struct k_work *work) {
     struct behavior_mouse_move_value_data *data =
         CONTAINER_OF(dwork, struct behavior_mouse_move_value_data, tick_work);
 
-    if (!data->active || data->dev == NULL) return;
+    if (!data->active || data->dev == NULL) {
+        return;
+    }
 
     const struct behavior_mouse_move_value_config *cfg = data->dev->config;
 
+    uint16_t period_ms = cfg->trigger_period_ms ? cfg->trigger_period_ms : 20;
+
     int32_t raw = zmk_value_store_get(cfg->index, cfg->value_min);
-    int32_t speed = map_value_to_speed(cfg, raw);
+    int32_t speed = map_value_to_speed(cfg, raw); // units/sec
+
+    // periodあたりの移動量: speed[unit/sec] * period[ms] / 1000
+    int32_t step32 = (speed * (int32_t)period_ms) / 1000;
+    if (step32 < 1) {
+        step32 = 1;
+    }
+    if (step32 > INT16_MAX) {
+        step32 = INT16_MAX;
+    }
+    int16_t step = (int16_t)step32;
 
     int16_t xdir = MOVE_X_DECODE(data->dir_param);
     int16_t ydir = MOVE_Y_DECODE(data->dir_param);
 
     int16_t dx = 0, dy = 0;
-    if (xdir != 0) dx = (xdir > 0) ? (int16_t)step : (int16_t)(-step);
-    if (ydir != 0) dy = (ydir > 0) ? (int16_t)step : (int16_t)(-step);
-
-    // periodあたりの移動量: speed[unit/sec] * period[ms] / 1000
-    int32_t step = (speed * cfg->trigger_period_ms) / 1000;
-    if (step < 1) step = 1;
-
-    int16_t dx = 0, dy = 0;
-    if (xdir != 0) dx = (xdir > 0) ? (int16_t)step : (int16_t)(-step);
-    if (ydir != 0) dy = (ydir > 0) ? (int16_t)step : (int16_t)(-step);
+    if (xdir != 0) {
+        dx = (xdir > 0) ? step : (int16_t)-step;
+    }
+    if (ydir != 0) {
+        dy = (ydir > 0) ? step : (int16_t)-step;
+    }
 
     // 送信（x/y 両方ある場合は最後の引数 sync を調整）
     if (dx != 0 && dy != 0) {
         input_report_rel(data->dev, INPUT_REL_X, dx, false, K_NO_WAIT);
-        input_report_rel(data->dev, INPUT_REL_Y, dy, true, K_NO_WAIT);
+        input_report_rel(data->dev, INPUT_REL_Y, dy, true,  K_NO_WAIT);
     } else if (dx != 0) {
         input_report_rel(data->dev, INPUT_REL_X, dx, true, K_NO_WAIT);
     } else if (dy != 0) {
         input_report_rel(data->dev, INPUT_REL_Y, dy, true, K_NO_WAIT);
     }
 
-    k_work_schedule(&data->tick_work, K_MSEC(cfg->trigger_period_ms));
+    k_work_schedule(&data->tick_work, K_MSEC(period_ms));
 }
 
 static int on_pressed(struct zmk_behavior_binding *binding,
