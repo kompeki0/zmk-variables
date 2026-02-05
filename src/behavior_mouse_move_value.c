@@ -67,8 +67,12 @@ static void tick_work_cb(struct k_work *work) {
     int32_t raw = zmk_value_store_get(cfg->index, cfg->value_min);
     int32_t speed = map_value_to_speed(cfg, raw);
 
-    int16_t xdir = (int16_t)(data->dir_param & 0xFFFF);
-    int16_t ydir = (int16_t)((data->dir_param >> 16) & 0xFFFF);
+    int16_t xdir = MOVE_X_DECODE(data->dir_param);
+    int16_t ydir = MOVE_Y_DECODE(data->dir_param);
+
+    int16_t dx = 0, dy = 0;
+    if (xdir != 0) dx = (xdir > 0) ? (int16_t)step : (int16_t)(-step);
+    if (ydir != 0) dy = (ydir > 0) ? (int16_t)step : (int16_t)(-step);
 
     // periodあたりの移動量: speed[unit/sec] * period[ms] / 1000
     int32_t step = (speed * cfg->trigger_period_ms) / 1000;
