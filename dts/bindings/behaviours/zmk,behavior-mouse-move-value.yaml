@@ -40,3 +40,14 @@ properties:
     type: int
     required: false
     default: 40
+
+  normalize-diagonal:
+    type: boolean
+    required: false
+    default: true
+
+  diag-scale-permil:
+    type: int
+    required: false
+    default: 707
+    description: "Scale applied to X/Y when moving diagonally. 707 ~= 1/sqrt(2) * 1000"
