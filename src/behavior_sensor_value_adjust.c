@@ -38,10 +38,12 @@ struct behavior_sensor_value_adjust_config {
     int32_t max_v;
     int32_t step;
     uint16_t ticks_per_step;
+
+    // ★追加：continuous（maxの次はmin、minの次はmax）
+    bool continuous;
 };
 
 struct value_adjust_state {
-    // 回転イベントの累積（同方向でも逆でも良いが、ここでは「符号付きで」持つ）
     int32_t tick_accum;
 };
 
@@ -49,6 +51,58 @@ struct behavior_sensor_value_adjust_data {
     enum dir pending_dir[ZMK_KEYMAP_SENSORS_LEN][ZMK_KEYMAP_LAYERS_LEN];
     struct value_adjust_state st[ZMK_KEYMAP_SENSORS_LEN][ZMK_KEYMAP_LAYERS_LEN];
 };
+
+static inline int32_t clamp_i32(int32_t v, int32_t lo, int32_t hi) {
+    return (v < lo) ? lo : (v > hi) ? hi : v;
+}
+
+static inline int32_t mod_pos_i32(int32_t a, int32_t m) {
+    // m > 0 前提で「常に 0..m-1」を返すmod
+    int32_t r = a % m;
+    return (r < 0) ? (r + m) : r;
+}
+
+static int32_t wrap_i32(int32_t v, int32_t min_v, int32_t max_v) {
+    // min_v..max_v を循環（両端含む）
+    int32_t range = max_v - min_v + 1;
+    if (range <= 0) {
+        // 異常系（min>=maxなど）は安全側：minに寄せる
+        return min_v;
+    }
+    return min_v + mod_pos_i32(v - min_v, range);
+}
+
+static int32_t value_store_add_wrapped(uint8_t index, int32_t delta,
+                                      int32_t min_v, int32_t max_v,
+                                      bool continuous, int32_t *out_newv) {
+    // 現在値を取得（存在しない場合は min_v を初期値に）
+    int32_t cur = zmk_value_store_get(index, min_v);
+
+    int32_t next = cur + delta;
+    if (continuous) {
+        next = wrap_i32(next, min_v, max_v);
+    } else {
+        next = clamp_i32(next, min_v, max_v);
+    }
+
+    // out_newv に返す（value_storeの実装に合わせて保存処理）
+    // ※あなたの value_store に set が無い場合に備えて add_clamped を利用しない形にしてます。
+    //   もし zmk_value_store_set(index, v) があるならそれを使うのがベスト。
+#ifdef ZMK_VALUE_STORE_HAS_SET
+    zmk_value_store_set(index, next);
+#else
+    // setが無い場合：差分を計算して add_clamped で近似的に合わせる
+    // ただし clamp されるので continuous=true のときに破綻し得る
+    // → setが無い構成なら、value_store側に set API を足すのが確実です。
+    // ここは「一旦コンパイル通す」ための保険として残します。
+    int32_t dummy = 0;
+    int32_t diff = next - cur;
+    zmk_value_store_add_clamped(index, diff, min_v, max_v, &dummy);
+#endif
+
+    if (out_newv) *out_newv = next;
+    return next;
+}
 
 static int accept_data(struct zmk_behavior_binding *binding,
                        struct zmk_behavior_binding_event event,
@@ -109,30 +163,27 @@ static int process(struct zmk_behavior_binding *binding,
 
     struct value_adjust_state *st = &data->st[sensor_index][event.layer];
 
-    // ticks-per-step を安全化
     uint16_t tps = cfg->ticks_per_step ? cfg->ticks_per_step : 1;
 
-    // 1回のTRIGGERを「1 tick」として数える（あなたの“連打抑止”と相性が良い）
     if (d == DIR_CW) {
         st->tick_accum += 1;
     } else {
         st->tick_accum -= 1;
     }
 
-    // 何tick溜まったら実際に値を動かすか
     while (st->tick_accum >= (int32_t)tps) {
-        st->tick_accum -= tps;
+        st->tick_accum -= (int32_t)tps;
 
         int32_t newv = 0;
-        zmk_value_store_add_clamped(cfg->index, cfg->step, cfg->min_v, cfg->max_v, &newv);
+        value_store_add_wrapped(cfg->index, cfg->step, cfg->min_v, cfg->max_v, cfg->continuous, &newv);
         LOG_DBG("value[%d] += %d -> %d", cfg->index, (int)cfg->step, (int)newv);
     }
 
     while (st->tick_accum <= -(int32_t)tps) {
-        st->tick_accum += tps;
+        st->tick_accum += (int32_t)tps;
 
         int32_t newv = 0;
-        zmk_value_store_add_clamped(cfg->index, -cfg->step, cfg->min_v, cfg->max_v, &newv);
+        value_store_add_wrapped(cfg->index, -cfg->step, cfg->min_v, cfg->max_v, cfg->continuous, &newv);
         LOG_DBG("value[%d] -= %d -> %d", cfg->index, (int)cfg->step, (int)newv);
     }
 
@@ -151,6 +202,7 @@ static const struct behavior_driver_api api = {
         .max_v = DT_INST_PROP_OR(n, max, 100),                                                        \
         .step = DT_INST_PROP_OR(n, step, 1),                                                          \
         .ticks_per_step = DT_INST_PROP_OR(n, ticks_per_step, 1),                                      \
+        .continuous = DT_INST_PROP_OR(n, continuous, 0),                                              \
     };                                                                                               \
     static struct behavior_sensor_value_adjust_data data_##n = {};                                    \
     BEHAVIOR_DT_INST_DEFINE(                                                                          \

@@ -37,3 +37,7 @@ properties:
     type: int
     required: false
     default: 1
+
+  continuous:
+    type: boolean
+    required: false
