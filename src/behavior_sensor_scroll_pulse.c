@@ -106,7 +106,7 @@ static void release_work_cb(struct k_work *work) {
     if (!dev) return;
 
     const struct behavior_sensor_scroll_pulse_config *cfg = dev->config;
-    const struct device *target = device_get_binding(cfg->target_behavior);
+    const struct device *target = zmk_behavior_get_binding(cfg->target_behavior);
     if (!target) return;
 
     if (st->acc_dx != 0 || st->acc_dy != 0) {
@@ -175,7 +175,7 @@ static int process(struct zmk_behavior_binding *binding,
 #endif
 
     // target device
-    const struct device *target = device_get_binding(cfg->target_behavior);
+    const struct device *target = zmk_behavior_get_binding(cfg->target_behavior);
     if (!target) return ZMK_BEHAVIOR_TRANSPARENT;
 
     int64_t now = k_uptime_get();
@@ -241,7 +241,7 @@ static int init(const struct device *dev) {
 #define INST(n)                                                                                     \
     static struct behavior_sensor_scroll_pulse_data data_##n = {};                                  \
     static const struct behavior_sensor_scroll_pulse_config cfg_##n = {                             \
-        .target_behavior = DEVICE_DT_NAME(DT_INST_PHANDLE(n, binding)),                             \
+        .target_behavior = DT_LABEL(DT_INST_PHANDLE(n, binding)),                         \
         .pulse_ms   = DT_INST_PROP_OR(n, pulse_ms, 30),                                             \
         .fast_dt_ms = DT_INST_PROP_OR(n, fast_dt_ms, 60),                                           \
         .slow_dt_ms = DT_INST_PROP_OR(n, slow_dt_ms, 250),                                          \
