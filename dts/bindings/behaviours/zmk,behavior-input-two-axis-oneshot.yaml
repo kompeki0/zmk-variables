@@ -1,0 +1,53 @@
+description: Two axis input behavior with optional one-shot emit on press (tap-friendly)
+
+compatible: "zmk,behavior-input-two-axis-oneshot"
+
+include: one_param.yaml
+
+properties:
+  x-input-code:
+    type: int
+    required: true
+
+  y-input-code:
+    type: int
+    required: true
+
+  trigger-period-ms:
+    type: int
+    required: true
+
+  delay-ms:
+    type: int
+    required: false
+    default: 0
+
+  time-to-max-speed-ms:
+    type: int
+    required: true
+
+  acceleration-exponent:
+    type: int
+    required: false
+    default: 1
+
+  oneshot-on-press:
+    type: boolean
+    required: false
+    default: true
+    description: "Emit one relative report immediately on press."
+
+  oneshot-scale:
+    type: int
+    required: false
+    default: 120
+    description: "Multiplier applied to MOVE_X/Y_DECODE(param1) for oneshot emission."
+
+  disable-continuous:
+    type: boolean
+    required: false
+    default: true
+    description: "If true, do not start tick-based continuous movement."
+
+  "#binding-cells":
+    const: 1
