@@ -90,29 +90,36 @@ static int16_t map_dt_to_amount(const struct behavior_sensor_scroll_velocity_con
     return (int16_t)amt;
 }
 
+static inline bool in_range(int idx, int max) { return idx >= 0 && idx < max; }
+
 static int accept_data(struct zmk_behavior_binding *binding,
                        struct zmk_behavior_binding_event event,
                        const struct zmk_sensor_config *sensor_config,
                        size_t channel_data_size,
                        const struct zmk_sensor_channel_data *channel_data) {
-    ARG_UNUSED(binding);
     ARG_UNUSED(sensor_config);
     ARG_UNUSED(channel_data_size);
 
     const struct device *dev = zmk_behavior_get_binding(binding->behavior_dev);
     struct behavior_sensor_scroll_velocity_data *data = dev->data;
 
-    const int sensor_index = ZMK_SENSOR_POSITION_FROM_VIRTUAL_KEY_POSITION(event.position);
-    const struct sensor_value v = channel_data[0].value;
+    const int sensor_index = (int)event.position;   // ★ まずはそのまま使う
+    const int layer = (int)event.layer;
 
+    // ★★★絶対にメモリ破壊しないためのガード
+    if (!in_range(sensor_index, ZMK_KEYMAP_SENSORS_LEN) || !in_range(layer, ZMK_KEYMAP_LAYERS_LEN)) {
+        return 0;
+    }
+
+    const struct sensor_value v = channel_data[0].value;
     int delta = (v.val1 == 0) ? v.val2 : v.val1;
 
     if (delta > 0) {
-        data->pending_dir[sensor_index][event.layer] = SCROLL_CW;
+        data->pending_dir[sensor_index][layer] = SCROLL_CW;
     } else if (delta < 0) {
-        data->pending_dir[sensor_index][event.layer] = SCROLL_CCW;
+        data->pending_dir[sensor_index][layer] = SCROLL_CCW;
     } else {
-        data->pending_dir[sensor_index][event.layer] = SCROLL_NONE;
+        data->pending_dir[sensor_index][layer] = SCROLL_NONE;
     }
 
     return 0;
@@ -125,19 +132,24 @@ static int process(struct zmk_behavior_binding *binding,
     const struct behavior_sensor_scroll_velocity_config *cfg = dev->config;
     struct behavior_sensor_scroll_velocity_data *data = dev->data;
 
-    const int sensor_index = ZMK_SENSOR_POSITION_FROM_VIRTUAL_KEY_POSITION(event.position);
+    const int sensor_index = (int)event.position;  // ★そのまま
+    const int layer = (int)event.layer;
 
-    if (mode != BEHAVIOR_SENSOR_BINDING_PROCESS_MODE_TRIGGER) {
-        data->pending_dir[sensor_index][event.layer] = SCROLL_NONE;
+    if (!in_range(sensor_index, ZMK_KEYMAP_SENSORS_LEN) || !in_range(layer, ZMK_KEYMAP_LAYERS_LEN)) {
         return ZMK_BEHAVIOR_TRANSPARENT;
     }
 
-    enum scroll_dir dir = data->pending_dir[sensor_index][event.layer];
-    data->pending_dir[sensor_index][event.layer] = SCROLL_NONE;
+    if (mode != BEHAVIOR_SENSOR_BINDING_PROCESS_MODE_TRIGGER) {
+        data->pending_dir[sensor_index][layer] = SCROLL_NONE;
+        return ZMK_BEHAVIOR_TRANSPARENT;
+    }
+
+    enum scroll_dir dir = data->pending_dir[sensor_index][layer];
+    data->pending_dir[sensor_index][layer] = SCROLL_NONE;
 
     if (dir == SCROLL_NONE) return ZMK_BEHAVIOR_TRANSPARENT;
 
-    struct per_state *st = &data->st[sensor_index][event.layer];
+    struct per_state *st = &data->st[sensor_index][layer];
 
     uint32_t now_ms = (uint32_t)k_uptime_get();
     if (!st->inited) {
@@ -149,24 +161,20 @@ static int process(struct zmk_behavior_binding *binding,
     uint32_t dt = now_ms - st->last_ts_ms;
     st->last_ts_ms = now_ms;
 
-    uint16_t alpha = cfg->ema_alpha_permil;
-    st->ema_dt_ms = ema_u32(st->ema_dt_ms, dt, alpha);
+    st->ema_dt_ms = ema_u32(st->ema_dt_ms, dt, cfg->ema_alpha_permil);
 
     int16_t amt = map_dt_to_amount(cfg, st->ema_dt_ms);
 
-    // sign
     int sign = (dir == SCROLL_CW) ? 1 : -1;
     if (cfg->invert) sign = -sign;
 
     int16_t wheel = (int16_t)(sign * amt);
-
     uint16_t code = (cfg->axis == 1) ? INPUT_REL_HWHEEL : INPUT_REL_WHEEL;
 
-    // 1発だけ送る（連打周期=回転速度で自然に加速する）
     input_report_rel(dev, code, wheel, true, K_NO_WAIT);
-
     return ZMK_BEHAVIOR_OPAQUE;
 }
+
 
 static const struct behavior_driver_api api = {
     .sensor_binding_accept_data = accept_data,
