@@ -44,9 +44,9 @@ properties:
     description: "Multiplier applied to MOVE_X/Y_DECODE(param1) for oneshot emission."
 
   disable-continuous:
-    type: boolean
+    type: int
     required: false
-    default: true
+    default: 1
     description: "If true, do not start tick-based continuous movement."
 
   "#binding-cells":
