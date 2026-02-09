@@ -221,7 +221,7 @@ static void update_work_scheduling(const struct device *dev) {
     }
 }
 
-int behavior_input_two_axis_adjust_speed(const struct device *dev, int16_t dx, int16_t dy) {
+static int behavior_input_two_axis_adjust_speed(const struct device *dev, int16_t dx, int16_t dy) {
     struct behavior_input_two_axis_data *data = dev->data;
 
     data->state.x.speed += dx;
