@@ -8,7 +8,7 @@ properties:
     const: 0
 
   bindings:
-    type: phandles
+    type: phandle-array
     required: true
 
   dt-min-ms:
