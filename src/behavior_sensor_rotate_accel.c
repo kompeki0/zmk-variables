@@ -14,6 +14,7 @@
 #include <zmk/behavior.h>
 #include <zmk/behavior_queue.h>
 #include <zmk/virtual_key_position.h>
+#include <zmk/events/position_state_changed.h>
 
 #include <dt-bindings/zmk/pointing.h> // MOVE(), MOVE_X_DECODE, MOVE_Y_DECODE
 
