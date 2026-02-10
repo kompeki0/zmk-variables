@@ -1,0 +1,43 @@
+description: Sensor rotate behavior with acceleration (dt-based step scaling)
+
+compatible: "zmk,behavior-sensor-rotate-accel"
+
+properties:
+  "#sensor-binding-cells":
+    const: 0
+
+  bindings:
+    type: phandles
+    required: true
+
+  dt-min-ms:
+    type: int
+    default: 30
+    description: "dt <= dt-min-ms is treated as max speed"
+
+  dt-max-ms:
+    type: int
+    default: 200
+    description: "dt >= dt-max-ms is treated as min speed"
+
+  steps-min:
+    type: int
+    default: 1
+
+  steps-max:
+    type: int
+    default: 5
+
+  curve:
+    type: int
+    default: 1
+    description: "0=linear, 1=quadratic(ease-out), 2=cubic(ease-out)"
+
+  same-dir-only:
+    type: boolean
+    description: "If set, direction change resets acceleration (treated as slow)"
+
+  tap-ms:
+    type: int
+    default: 0
+    description: "Delay between press and release enqueued for the binding"
