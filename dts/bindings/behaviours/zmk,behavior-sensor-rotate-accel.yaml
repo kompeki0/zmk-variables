@@ -4,6 +4,7 @@ compatible: "zmk,behavior-sensor-rotate-accel"
 
 properties:
   "#sensor-binding-cells":
+    type: int
     const: 0
 
   bindings:
