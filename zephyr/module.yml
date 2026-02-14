@@ -1,4 +1,4 @@
-name: zmk-rotation-value-change
+name: zmk-variables
 build:
   cmake: .
   kconfig: Kconfig
