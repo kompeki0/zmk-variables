@@ -1,0 +1,30 @@
+description: Dispatch to a binding based on value_store value
+
+compatible: "zmk,behavior-value-switch"
+
+include: zero_param.yaml
+
+properties:
+  index:
+    type: int
+    required: true
+
+  fallback:
+    type: int
+    required: false
+    default: 0
+
+  case-values:
+    type: array
+    required: true
+    description: Integer values to match against value_store[index]
+
+  bindings:
+    type: phandle-array
+    required: true
+    description: Binding list aligned by index with case-values
+
+  default-binding:
+    type: phandle-array
+    required: false
+    description: Optional binding used when no case value matches

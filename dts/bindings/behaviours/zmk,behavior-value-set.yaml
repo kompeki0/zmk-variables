@@ -1,0 +1,14 @@
+description: Set a value_store slot to a fixed value on key press
+
+compatible: "zmk,behavior-value-set"
+
+include: zero_param.yaml
+
+properties:
+  index:
+    type: int
+    required: true
+
+  value:
+    type: int
+    required: true
